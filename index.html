@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<base target="_top">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	
+	<title>État parcellaire de la zone de Guelmim</title>
+	
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Leaflet Measure plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+    <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+    
+    <!-- Leaflet Draw plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+    <!-- Leaflet Geocoder plugin -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
+    <script src="Guelmim.js"></script>
+
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+		.leaflet-container {
+			height: 600px;
+			width: 100%;
+			max-width: 100%;
+			max-height: 100%;
+		}
+        h1 {
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            margin-top: 10px;
+            padding: 10px;
+            width: 50%;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 20px; /* Réduit la taille de la police */
+        }
+        .leaflet-bar a {
+            background-color: #4CAF50; /* Green background for the toolbar */
+            color: white; /* White text */
+        }
+        .leaflet-bar a:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+        .leaflet-draw-toolbar a {
+            background-color: #007bff; /* Blue background for drawing tools */
+            color: white;
+        }
+        .leaflet-draw-toolbar a:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+	</style>
+	
+</head>
+<body>
+
+<h1>État parcellaire de la zone de Guelmim</h1>
+
+<div id="map" style="width: 100%; height: 600px;"></div>
+<script>
+
+    // Create the map centered on Guelmim with a smaller zoom level
+	var map = L.map('map').setView([28.929, -10.009], 10); // Zoom de départ changé à 10
+
+    // Add OpenStreetMap tiles
+	var tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+	}).addTo(map);
+
+    // Add a marker at a specific location
+	var marker = L.marker([28.9877, -10.057]).addTo(map)
+		.bindPopup('<b>Guelmim</b><br />Zone d\'étude.').openPopup();
+
+    // Add geoJSON data from the yaa variable
+	var Guelmim = L.geoJSON(parcelle).addTo(map);
+
+    // Fit the map to the geoJSON bounds
+    map.fitBounds(Guelmim.getBounds());
+
+    // Add measure control
+    L.control.measure({
+        primaryLengthUnit: 'meters', 
+        secondaryLengthUnit: 'kilometers',
+        primaryAreaUnit: 'sqmeters', 
+        secondaryAreaUnit: 'hectares',
+        activeColor: '#ABE67E',
+        completedColor: '#C8F2BE'
+    }).addTo(map);
+
+    // Add drawing tools (polygons, markers, etc.)
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    var drawControl = new L.Control.Draw({
+        edit: {
+            featureGroup: drawnItems
+        },
+        draw: {
+            polygon: true, // Enable polygon drawing
+            polyline: true,
+            rectangle: true,
+            circle: true,
+            marker: true,
+            circlemarker: false
+        }
+    });
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (e) {
+        var layer = e.layer;
+        drawnItems.addLayer(layer);
+    });
+
+    // Add search control (geocoder)
+    var geocoder = L.Control.geocoder({
+        defaultMarkGeocode: false
+    })
+    .on('markgeocode', function(e) {
+        var bbox = e.geocode.bbox;
+        var poly = L.polygon([
+            [bbox.getSouthEast().lat, bbox.getSouthEast().lng],
+            [bbox.getNorthEast().lat, bbox.getNorthEast().lng],
+            [bbox.getNorthWest().lat, bbox.getNorthWest().lng],
+            [bbox.getSouthWest().lat, bbox.getSouthWest().lng]
+        ]).addTo(map);
+        map.fitBounds(poly.getBounds());
+    })
+    .addTo(map);
+
+    // Create a popup that opens when clicking on the map
+	var popup = L.popup();
+
+	function onMapClick(e) {
+		popup
+			.setLatLng(e.latlng)
+			.setContent(`You clicked the map at ${e.latlng.toString()}`)
+			.openOn(map);
+	}
+    
+	map.on('click', onMapClick);
+
+</script>
+
+</body>
+</html>
